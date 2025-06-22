@@ -139,7 +139,7 @@ bool Keyboard::reset()
 
   // tries up to three times to reset keyboard
   for (int i = 0; i < 3; ++i) {
-    ESP_LOGI ("FabGL","Keyboard::reset - try (%d)",i);
+    //ESP_LOGI ("FabGL","Keyboard::reset - try (%d)",i);
     m_keyboardAvailable = send_cmdReset();
     if (m_keyboardAvailable)
       break;

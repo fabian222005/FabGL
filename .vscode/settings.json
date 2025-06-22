@@ -8,5 +8,6 @@
         "string": "cpp",
         "unordered_map": "cpp",
         "vector": "cpp"
-    }
+    },
+    "idf.pythonInstallPath": "/opt/homebrew/bin/python3"
 }

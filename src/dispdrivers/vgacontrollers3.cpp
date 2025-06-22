@@ -15,6 +15,7 @@ VGAControllerS3::VGAControllerS3 ()
     m_viewPortHeight=480;
     m_colorCount=64;
     redraw_task_handle = NULL;
+    m_initialized=false;
 }
 
 #ifdef BITLUNI
@@ -59,6 +60,7 @@ void VGAControllerS3::setResolution(Mode new_mode,bool double_buffer)
 	{
         vga.show();
 	    vga.start();
+      m_initialized=true;
     }
     else
     {
@@ -94,11 +96,10 @@ void VGAControllerS3::setResolution(VGATimings const& timings, int color_depth, 
     m_maxVSyncISRTime = ceil(1000000.0 / timings.frequency * timings.scanCount * linesize * (timings.VSyncPulse + timings.VBackPorch + timings.VFrontPorch + viewportrow));
     //ets_printf("max vsync ISR time: %d\r\n",m_maxVSyncISRTime);
 
-    if (!vga.init(timings, color_depth, _pins, true, doubleBuffered, true))
-    {
-      ets_printf ("VGA resolution change not successful\r\n");
+    if (vga.init(timings, color_depth, _pins, true, doubleBuffered, false))
+      m_initialized=true;
+    else
       end();
-    }
 }
 #endif
 
@@ -242,6 +243,7 @@ void VGAControllerS3::end()
     ets_printf ("VGAControllerS3::end()\r\n");
     m_primitiveProcessingSuspended=1;
     vga.stopVSyncInterupt();
+    m_initialized=false;
 }
 #else
 void VGAControllerS3::end()
@@ -255,6 +257,7 @@ void VGAControllerS3::end()
 
     m_primitiveProcessingSuspended=1;
     vga.deinit();
+    m_initialized=false;
 }
 #endif
 NativePixelFormat VGAControllerS3::nativePixelFormat()
@@ -308,11 +311,9 @@ void IRAM_ATTR VGAControllerS3::absDrawLine(int X1, int Y1, int X2, int Y2, RGB8
 }
 void IRAM_ATTR VGAControllerS3::rawCopyRow(int x1, int x2, int srcY, int dstY)
 {
-    #ifndef BITLUNI
-    ets_printf ("rawCopyRow from: %d,%d-%d,%d - to: %d,%d-%d,%d\r\n",x1,srcY,x2,srcY,x1,dstY,x2,dstY);
-    #endif
-    // from x1,srcY to x1,dstY, width of x2-x1, height of 1
-    vga.move_rect (x1,srcY,x1,dstY,x2-x1,1);
+    //ets_printf ("rawCopyRow from: %d,%d-%d,%d - to: %d,%d-%d,%d\r\n",x1,srcY,x2,srcY,x1,dstY,x2,dstY);
+    // from x1,srcY to x1,dstY, width of x2-x1+1, height of 1
+    vga.move_rect (x1,srcY,x1,dstY,x2-x1+1,1);
 }
 void IRAM_ATTR VGAControllerS3::rawFillRow(int y, int x1, int x2, RGB888 color)
 {
@@ -331,9 +332,7 @@ void IRAM_ATTR VGAControllerS3::clear(Rect & updateRect)
 }
 void IRAM_ATTR VGAControllerS3::VScroll(int scroll, Rect & updateRect)
 {
-    #ifndef BITLUNI
-    ets_printf ("VScroll\r\n");
-    #endif
+    //ets_printf ("VScroll\r\n");
     hideSprites(updateRect);
     RGB888 color = getActualBrushColor();
     int Y1 = paintState().scrollingRegion.Y1;
@@ -602,8 +601,6 @@ void VGAControllerS3::redraw_task(void *pArg)
     int color=0,backcolor;
     const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 20 );
 
-    ets_printf ("+Redraw task started\r\n");
-
     VGAControllerS3* controller = (VGAControllerS3*)pArg;
     VGA& vga = controller->vga;
     // wait till next vsync   
@@ -635,8 +632,8 @@ void VGAControllerS3::redraw_task(void *pArg)
           else
           {
               /* The call to ulTaskNotifyTake() timed out. */
-              ets_printf ("-Error, waited too long for VSync\r\n");
-              ets_printf ("-%d frames skipped\r\n",ulNotificationValue-1);
+              // ets_printf ("-Error, waited too long for VSync\r\n");
+              // ets_printf ("-%d frames skipped\r\n",ulNotificationValue-1);
           }
     }
 }

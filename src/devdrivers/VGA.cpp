@@ -8,7 +8,7 @@
 #include <esp_lcd_panel_ops.h>
 #include <string.h>
 #include <math.h>
-#include "esp32s3/rom/ets_sys.h"
+//#include "esp32s3/rom/ets_sys.h"
 
 #ifndef BITLUNI // we do the ESPIDF official way
 
@@ -65,14 +65,12 @@ bool VGA::init(VGATimings const& timings, int bits, PinConfig pins, bool usePsra
         _fbSize = _screenHeight*_screenWidth*2;
     _colorBits = bits;
 
-    ESP_LOGI(TAG, "Create semaphores");
     _sem_vsync_end = xSemaphoreCreateBinary();
     assert(_sem_vsync_end);
     _sem_gui_ready = xSemaphoreCreateBinary();
     assert(_sem_gui_ready);
 
-	ESP_LOGI(TAG, "Install RGB LCD panel driver");
-    esp_lcd_rgb_panel_config_t panel_config;
+	esp_lcd_rgb_panel_config_t panel_config;
     memset(&panel_config, 0, sizeof(esp_lcd_rgb_panel_config_t));
     // general
     panel_config.data_width = 8;
@@ -113,7 +111,6 @@ bool VGA::init(VGATimings const& timings, int bits, PinConfig pins, bool usePsra
     panel_config.timings.flags.pclk_active_neg = true;
     panel_config.timings.flags.hsync_idle_low = timings.HSyncLogic=='+';
     panel_config.timings.flags.vsync_idle_low = timings.VSyncLogic=='+';
-    ESP_LOGI (TAG,"Timings:\r\nPixelclock: %d\r\nHSync back porch: %d\r\nHSync front porch: %d\r\nHSync pulse width: %d\r\nVSync back porch: %d\r\nVSync front porch: %d\r\nVSync pulse width: %d\r\n",timings.frequency,timings.HBackPorch,timings.HFrontPorch,timings.HSyncPulse,timings.VBackPorch,timings.VFrontPorch,timings.VSyncPulse);
     // framebuffer
     panel_config.flags.fb_in_psram = usePsram;
     panel_config.flags.double_fb = false;
@@ -141,7 +138,6 @@ bool VGA::init(VGATimings const& timings, int bits, PinConfig pins, bool usePsra
 
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &_panel_handle));
 
-    ESP_LOGI(TAG, "Register event callbacks");
     esp_lcd_rgb_panel_event_callbacks_t cbs = {
         .on_vsync = vsyncEvent,
     };
@@ -165,7 +161,6 @@ bool VGA::deinit() {
         setRedrawTask (NULL);
         esp_err_t err = esp_lcd_panel_del(_panel_handle);
         if (err != ESP_OK) {
-            ESP_LOGE(TAG, "error deleting rgb lcd panel");
             return false;
         }
         _panel_handle = NULL;
@@ -282,7 +277,7 @@ void own_memset (uint8_t* address,uint8_t value,size_t size)
 void VGA::clear(uint8_t rgb)
 {
     uint8_t* draw_buffer = getDrawBuffer ();
-    own_memset (draw_buffer,rgb,_fbSize);
+    memset (draw_buffer,rgb,_fbSize);
 }
 
 void VGA::fill_rect(uint8_t rgb,u_int x1,u_int y1,u_int x2,u_int y2)
@@ -303,14 +298,14 @@ void VGA::fill_rect(uint8_t rgb,u_int x1,u_int y1,u_int x2,u_int y2)
         tswap (top,bottom);
     }
 	for(int y = top; y <= bottom; y++)
-        own_memset (draw_buffer+y*_screenWidth+left,rgb,right-left);
+        memset (draw_buffer+y*_screenWidth+left,rgb,right-left);
 }
 void VGA::move_rect (u_int sx,u_int sy,u_int dx,u_int dy,u_int width,u_int height)
 {
     uint8_t* draw_buffer = getDrawBuffer ();
     for (int y = 0;y < height;y++)
-        memcpy (draw_buffer+((y+sy)*_screenWidth)+sx,
-                draw_buffer+((y+dy)*_screenWidth)+dx,
+        memcpy (draw_buffer+((y+dy)*_screenWidth)+dx,
+                draw_buffer+((y+sy)*_screenWidth)+sx,
                 width);
 }
 void VGA::set_pixel(u_int x, u_int y, uint8_t r, uint8_t g, uint8_t b)

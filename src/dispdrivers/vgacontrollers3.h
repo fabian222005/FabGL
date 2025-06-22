@@ -59,6 +59,8 @@ namespace fabgl
             #endif
             void begin(PinConfig set_pins);
             void end ();
+            inline bool isInitialized() {return m_initialized;};
+
 
             uint8_t IRAM_ATTR preparePixel(RGB222 rgb);
             
@@ -68,6 +70,7 @@ namespace fabgl
             bool convertModelineToTimings(char const * modeline, VGATimings * timings);
             
         private:
+            bool m_initialized;
             int m_colorCount;
             volatile int m_primitiveProcessingSuspended;
             PinConfig _pins;

@@ -32,7 +32,7 @@
 #elif CONFIG_IDF_TARGET_ESP32S3
 #include "soc/rtc_cntl_reg.h"
 #include "esp32s3/ulp.h"
-#include "ulp_debug.h"
+//#include "ulp_debug.h"
 #endif
 #include "driver/rtc_io.h"
 #include "soc/sens_reg.h"
@@ -46,8 +46,9 @@
 #include "ulp_macro_ex.h"
 #include "devdrivers/keyboard.h"
 #include "devdrivers/mouse.h"
+#ifdef ULP_DEBUG
 #include "esp32s3/rom/ets_sys.h"
-
+#endif
 
 #pragma GCC optimize ("O2")
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
@@ -922,12 +923,10 @@ static void replace_placeholders(uint32_t prg_start, int size, bool port0Enabled
     CLK_rtc_gpio_num[0]  = port0_clkIO;
     CLK_rtc_gpio_reg[0]  = rtc_io_desc[port0_clkIO].reg;
     CLK_rtc_gpio_ie_s[0] = (uint32_t) ffs(rtc_io_desc[port0_clkIO].ie) - 1;
-    ets_printf ("rtc clk io: %d,%d,%d\n",CLK_rtc_gpio_num[0],CLK_rtc_gpio_reg[0],CLK_rtc_gpio_ie_s[0]);
     int port0_datIO = rtc_io_number_get(port0_datGPIO);
     DAT_rtc_gpio_num[0]  = port0_datIO;
     DAT_rtc_gpio_reg[0]  = rtc_io_desc[port0_datIO].reg;
     DAT_rtc_gpio_ie_s[0] = (uint32_t) ffs(rtc_io_desc[port0_datIO].ie) - 1;
-    ets_printf ("rtc dat io: %d,%d,%d\n",DAT_rtc_gpio_num[0],DAT_rtc_gpio_reg[0],DAT_rtc_gpio_ie_s[0]);
     #endif
   }
 
@@ -954,10 +953,8 @@ static void replace_placeholders(uint32_t prg_start, int size, bool port0Enabled
   for (uint32_t i = 0; i < size; ++i) {
     ulp_insn_t * ins = (ulp_insn_t *) RTC_SLOW_MEM + i;
     if (ins->macro.opcode == OPCODE_PLACEHOLDER) {
-      //ets_printf ("found placeholder\n",port0_clkGPIO);
       int ps2port = ins->macro.unused;
       if ((port0Enabled && ps2port == 0) || (port1Enabled && ps2port == 1)) {
-        //ets_printf ("updating placeholder for port: %d\n",ps2port);
         ins->macro.unused = 0;
         switch (ins->macro.sub_opcode) {
           case SUB_OPCODE_DAT_ENABLE_OUTPUT:
@@ -1033,7 +1030,6 @@ PS2Controller::~PS2Controller()
 // Note: GPIO_UNUSED is a placeholder used to disable PS/2 port 1.
 void PS2Controller::begin(gpio_num_t port0_clkGPIO, gpio_num_t port0_datGPIO, gpio_num_t port1_clkGPIO, gpio_num_t port1_datGPIO)
 {
-  ESP_LOGI("FabGL", "PS2Controller::begin (%d,%d)",port0_clkGPIO,port0_datGPIO);
   // ULP stuff is always active, even when end() is called
   if (!s_initDone) {
 
@@ -1042,10 +1038,9 @@ void PS2Controller::begin(gpio_num_t port0_clkGPIO, gpio_num_t port0_datGPIO, gp
 
     if (s_portEnabled[0]) {
       if (!rtc_gpio_is_valid_gpio(port0_clkGPIO) || !rtc_gpio_is_valid_gpio(port0_datGPIO)) {
-        ESP_LOGI("FabGL", "Invalid PS/2 Port 0 pins");
+        ESP_LOGE("FabGL", "Invalid PS/2 Port0 pins");
         s_portEnabled[0] = false;
       } else {
-        ESP_LOGI("FabGL", "PS2Controller::begin - enable port0 pins for RTC");
         rtc_gpio_init(port0_clkGPIO);
         rtc_gpio_init(port0_datGPIO);
       }
@@ -1053,10 +1048,9 @@ void PS2Controller::begin(gpio_num_t port0_clkGPIO, gpio_num_t port0_datGPIO, gp
 
     if (s_portEnabled[1]) {
       if (!rtc_gpio_is_valid_gpio(port1_clkGPIO) || !rtc_gpio_is_valid_gpio(port1_datGPIO)) {
-        ESP_LOGI("FabGL", "Invalid PS/2 Port 1 pins");
+        ESP_LOGE("FabGL", "Invalid PS/2 Port1 pins");
         s_portEnabled[1] = false;
       } else {
-        ESP_LOGI("FabGL", "PS2Controller::begin - enable port1 pins for RTC");
         rtc_gpio_init(port1_clkGPIO);
         rtc_gpio_init(port1_datGPIO);
       }
@@ -1074,7 +1068,6 @@ void PS2Controller::begin(gpio_num_t port0_clkGPIO, gpio_num_t port0_datGPIO, gp
     ulp_process_macros_and_load(RTCMEM_PROG_START, ULP_code, &size);         // convert macros to ULP code
 #endif
     replace_placeholders(RTCMEM_PROG_START, size, s_portEnabled[0], port0_clkGPIO, port0_datGPIO, s_portEnabled[1], port1_clkGPIO, port1_datGPIO); // replace GPIO placeholders
-    ESP_LOGI("FABGL","prog size = %d\n", size);
     assert(size < RTCMEM_VARS_START && "ULP Program too long, increase RTCMEM_VARS_START");
 
 #if CONFIG_IDF_TARGET_ESP32
@@ -1104,16 +1097,13 @@ void PS2Controller::begin(gpio_num_t port0_clkGPIO, gpio_num_t port0_datGPIO, gp
     esp_intr_alloc_pinnedToCore(ETS_RTC_CORE_INTR_SOURCE, ESP_INTR_FLAG_LEVEL2, ULPWakeISR, nullptr, &s_ULPWakeISRHandle, 1);
     SET_PERI_REG_MASK(RTC_CNTL_INT_ENA_REG, RTC_CNTL_ULP_CP_INT_ENA);
 #elif CONFIG_IDF_TARGET_ESP32S3
-    ulpDump (0,size);
+    //ulpDump (0,size);
     ESP_ERROR_CHECK (ulp_isr_register(ULPWakeISR, nullptr));
     ESP_ERROR_CHECK (ulp_run (RTCMEM_PROG_START));
-#endif
-    ESP_LOGI("FabGL", "PS2Controller::begin - ULP running");
-        
+#endif    
     s_initDone = true;
 
   } else {
-    ESP_LOGI("FabGL", "PS2Controller::begin - already initialized");
     // ULP already initialized
     for (int p = 0; p < 2; ++p) {
       RTC_SLOW_MEM[RTCMEM_PORT0_TX + p]         = 0;
@@ -1205,7 +1195,6 @@ void PS2Controller::end()
 void PS2Controller::disableRX(int PS2Port)
 {
   if (s_portEnabled[PS2Port]) {
-    ESP_LOGI ("FabGL","disableRX(%d)",PS2Port);
     RTC_SLOW_MEM[RTCMEM_PORT0_RX_DISABLE + PS2Port] = 1;
   }
 }
@@ -1216,7 +1205,6 @@ void PS2Controller::enableRX(int PS2Port)
   if (s_portEnabled[PS2Port]) {
     // enable RX only if there is not data waiting
     if (!dataAvailable(PS2Port)) {
-      ESP_LOGI ("FabGL","enableRX(%d)",PS2Port);
       RTC_SLOW_MEM[RTCMEM_PORT0_RX_ENABLE + PS2Port] = 1;
     }
   }
@@ -1251,7 +1239,6 @@ int PS2Controller::getData(int PS2Port, int timeOutMS)
     }
 
     // ULP leaves RX disabled whenever receives data or CLK timeout, so we need to enable it here
-    //ESP_LOGI("FabGL","getData (%d) - enableRX",PS2Port);
     RTC_SLOW_MEM[RTCMEM_PORT0_RX_ENABLE + PS2Port] = 1;
 
   }
@@ -1264,7 +1251,6 @@ void PS2Controller::sendData(uint8_t data, int PS2Port)
 {
   if (s_portEnabled[PS2Port]) {
     RTC_SLOW_MEM[RTCMEM_PORT0_DATAOUT + PS2Port] = 0x200 | ((!calcParity(data) & 1) << 8) | data;  // 0x200 = stop bit. Start bit is not specified here.
-    ESP_LOGI("FabGL","sendData (%d,%d) - enableTX",PS2Port,data);
     RTC_SLOW_MEM[RTCMEM_PORT0_TX + PS2Port]      = 1;
   }
 }
@@ -1312,7 +1298,6 @@ void IRAM_ATTR PS2Controller::ULPWakeISR(void * arg)
 void IRAM_ATTR PS2Controller::ULPWakeISR(void * arg)
 {
     BaseType_t yield = 0;
-    //ets_printf (".");
   
     for (int p = 0; p < 2; ++p) {
         if (RTC_SLOW_MEM[RTCMEM_PORT0_RX + p] & 0xffff) {
