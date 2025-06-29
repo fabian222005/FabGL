@@ -10,6 +10,8 @@ Code Migration:
 In order to use this library with an example or with an existing program please:
 to init DisplayController use:
 ``` 
+//Normally is fabgl::VGA8Controller
+fabgl::VGAControllerS3 DisplayController;
 //Define Pins of connection
 //                   -1,-1,-1,R2,R1,-1,-1,-1,-1,G2,G1,-1,-1,-1,B2,B1,  h, v
 const PinConfig pins(-1,-1,-1,5,4,  -1,-1,-1,-1,7,6,  -1,-1,-1,12,11,  14,13);
