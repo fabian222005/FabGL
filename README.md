@@ -33,7 +33,7 @@ S0urceror for adapting FabGL for ESP32S3
 fabian222005 for fixing errors and implement minor functions in VGAControllerS3.cpp
 
 Experimental:
-fabian222005 tried to implement Xiaolin Wu's line algorithm for antialiasing line draw (minor fails like weird colors in lines because the prepareTransPixel gets color of previous frame, and not of the background of line :( )
+fabian222005 tried to implement Xiaolin Wu's line algorithm for antialiasing line draw (minor fails like weird colors in lines because the prepareTransPixel gets color of previous frame, and not of the background of line :( There are inside of dispdrivers with sufix .antialias )
 
 **[Please look here for full API documentation](http://www.fabglib.org)**
 
